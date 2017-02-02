@@ -181,8 +181,8 @@ extern "C" {
 
 //======================================
 
-#define PROXY_VERSION "1.10"		// Release version of QTV (not protocol).
-#define QTV_VERSION			1.0f		// we are support up to this QTV version.
+#define PROXY_VERSION    "1.11-dev"        // Release version of QTV (not protocol).
+#define QTV_VERSION      1.0f              // we are support up to this QTV version.
 
 // { QTV_EZQUAKE_EXT
 
