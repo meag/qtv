@@ -143,12 +143,22 @@ void Net_SendQTVConnectionRequest(sv_t *qtv, char *authmethod, char *challenge)
 
 		// send hostname as userinfo
 		{
+			extern cvar_t address;
+
 			char userinfo[1024] = {0};
+			char temp[20] = { 0 };
+
+			snprintf (temp, sizeof (temp), "%u", qtv->streamid);
 
 			Info_SetValueForStarKey(userinfo, "name", hostname.string, sizeof(userinfo));
+			if (address.string[0])
+			{
+				Info_SetValueForStarKey (userinfo, "address", address.string, sizeof (userinfo));
+				Info_SetValueForStarKey (userinfo, "streamid", temp, sizeof (userinfo));
+			}
 
 			if (userinfo[0])
-				Net_UpstreamPrintf(qtv, "USERINFO: %s\n", userinfo);
+				Net_UpstreamPrintf(qtv, "USERINFO: \"%s\"\n", userinfo);
 		}
 
 // qqshka: we do not use RAW at all, so do not bother

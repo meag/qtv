@@ -39,6 +39,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 		#endif
 	#endif
 
+	// meag: windows now seems to define E* codes
+#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+	#define _CRT_NO_POSIX_ERROR_CODES
+#endif
+
 	#include <conio.h>
 	#include <winsock.h>	// This includes windows.h and is the reason for much compiling slowness with windows builds.
 	#include <stdlib.h>
@@ -49,13 +54,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 		#pragma comment (lib, "wsock32.lib")
 	#endif
 	#define qerrno WSAGetLastError()
+
+	// see _CRT_NO_POSIX_ERROR_CODES above
 	#define EWOULDBLOCK WSAEWOULDBLOCK
 	#define EINPROGRESS WSAEINPROGRESS
 	#define ECONNREFUSED WSAECONNREFUSED
 	#define ENOTCONN WSAENOTCONN
 	#define EMSGSIZE WSAEMSGSIZE
 	#define ECONNRESET WSAECONNRESET
-
 
 	// We have special functions to properly terminate sprintf buffers in windows.
 	// we assume other systems are designed with even a minor thought to security.

@@ -14,14 +14,15 @@ Contains the control routines
 const char* demos_allowed_ext[] = { ".mvd", ".gz", ".zip", ".bz2" };
 const int demos_allowed_ext_count = sizeof(demos_allowed_ext)/sizeof(*demos_allowed_ext);
 
-cvar_t version			= {"*version", "QTV " PROXY_VERSION, CVAR_ROM | CVAR_SERVERINFO};
+cvar_t version          = {"*version", "QTV " PROXY_VERSION, CVAR_ROM | CVAR_SERVERINFO};
 
-cvar_t developer		= {"developer", ""};
-cvar_t shownet			= {"shownet", ""};
+cvar_t developer        = {"developer", ""};
+cvar_t shownet          = {"shownet", ""};
 
-cvar_t hostname			= {"hostname", DEFAULT_HOSTNAME, CVAR_SERVERINFO};
-cvar_t hosttitle		= {"hosttitle", ""};
-cvar_t admin_password	= {"admin_password", ""};
+cvar_t hostname         = {"hostname", DEFAULT_HOSTNAME, CVAR_SERVERINFO};
+cvar_t address          = {"address", ""};
+cvar_t hosttitle        = {"hosttitle", ""};
+cvar_t admin_password   = {"admin_password", ""};
 
 int SortFilesByDate(const void *a, const void *b) 
 {
@@ -292,6 +293,7 @@ int main(int argc, char **argv)
 	Cvar_Register(&shownet);
 
 	Cvar_Register(&hostname);
+	Cvar_Register(&address);
 	Cvar_Register(&hosttitle);
 	Cvar_Register(&admin_password);
 

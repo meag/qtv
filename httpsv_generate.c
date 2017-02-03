@@ -28,6 +28,19 @@ qbool IsPlayer(const playerinfo_t *p)
 	return !atoi(Info_ValueForKey(p->userinfo, "*spectator", buffer, sizeof(buffer)));
 }
 
+qbool IsSpectator(const playerinfo_t* p)
+{
+	char buffer[64];
+
+	if (!p->userinfo[0])
+		return false;
+
+	if (!*Info_ValueForKey(p->userinfo, "*spectator", buffer, sizeof(buffer)))
+		return false;
+
+	return atoi(buffer);
+}
+
 void HTTPSV_GenerateNotFoundError(cluster_t *cluster, oproxy_t *dest)
 {
 	HTTPSV_SendHTTPHeader(cluster, dest, "404", "", false);
@@ -800,21 +813,32 @@ void HTTPSV_GenerateRSS(cluster_t *cluster, oproxy_t *dest, char *str)
 		// Output the playerlist (this will be shown in the description field of the RSS item).
 		for (player = 0; player < MAX_CLIENTS; player++)
 		{
-			if (IsPlayer(&streams->players[player]))
-			{
+			qbool isSpectator = false;
+
+			if (IsPlayer(&streams->players[player])) {
 				HTMLPRINT("<player>");
+			}
+			else if (isSpectator = IsSpectator(&streams->players[player])) {
+				HTMLPRINT("<spectator>");
+			}
+			else {
+				continue;
+			}
 
-				Info_ValueForKey(streams->players[player].userinfo, "name", tmp, sizeof(tmp));
-				HTMLprintf(playername, sizeof(playername), true, "%s", tmp);
+			Info_ValueForKey(streams->players[player].userinfo, "name", tmp, sizeof(tmp));
+			HTMLprintf(playername, sizeof(playername), true, "%s", tmp);
 
-				// Save a player list for the description also.
+			// Save a player list for the description also.
+			if (!isSpectator) {
 				strlcat(playerlist, playername, sizeof(playerlist));
 				strlcat(playerlist, CRLF, sizeof(playerlist));
+			}
 
-				HTMLPRINT("<name>");
-				HTMLPRINT(playername);
-				HTMLPRINT("</name>" CRLF);
+			HTMLPRINT("<name>");
+			HTMLPRINT(playername);
+			HTMLPRINT("</name>" CRLF);
 
+			if (!isSpectator) {
 				HTMLPRINT("<team>");
 				Info_ValueForKey(streams->players[player].userinfo, "team", tmp, sizeof(tmp));
 				HTMLprintf(tmp2, sizeof(tmp2), true, "%s", tmp);
@@ -825,17 +849,19 @@ void HTTPSV_GenerateRSS(cluster_t *cluster, oproxy_t *dest, char *str)
 				HTMLprintf(tmp, sizeof(tmp), true, "%i", streams->players[player].frags);
 				HTMLPRINT(tmp);
 				HTMLPRINT("</frags>" CRLF);
+			}
 
-				HTMLPRINT("<ping>");
-				HTMLprintf(tmp, sizeof(tmp), true, "%i", streams->players[player].ping);
-				HTMLPRINT(tmp);
-				HTMLPRINT("</ping>" CRLF);
+			HTMLPRINT("<ping>");
+			HTMLprintf(tmp, sizeof(tmp), true, "%i", streams->players[player].ping);
+			HTMLPRINT(tmp);
+			HTMLPRINT("</ping>" CRLF);
 
-				HTMLPRINT("<pl>");
-				HTMLprintf(tmp, sizeof(tmp), true, "%i", streams->players[player].packetloss);
-				HTMLPRINT(tmp);
-				HTMLPRINT("</pl>" CRLF);
+			HTMLPRINT("<pl>");
+			HTMLprintf(tmp, sizeof(tmp), true, "%i", streams->players[player].packetloss);
+			HTMLPRINT(tmp);
+			HTMLPRINT("</pl>" CRLF);
 
+			if (!isSpectator) {
 				HTMLPRINT("<topcolor>");
 				Info_ValueForKey(streams->players[player].userinfo, "topcolor", tmp, sizeof(tmp));
 				HTMLprintf(tmp2, sizeof(tmp2), true, "%s", tmp);
@@ -847,8 +873,13 @@ void HTTPSV_GenerateRSS(cluster_t *cluster, oproxy_t *dest, char *str)
 				HTMLprintf(tmp2, sizeof(tmp2), true, "%s", tmp);
 				HTMLPRINT(tmp2);
 				HTMLPRINT("</bottomcolor>" CRLF);
+			}
 
+			if (!isSpectator) {
 				HTMLPRINT("</player>" CRLF);
+			}
+			else {
+				HTMLPRINT("</spectator>" CRLF);
 			}
 		}
 
@@ -891,6 +922,31 @@ void HTTPSV_GenerateRSS(cluster_t *cluster, oproxy_t *dest, char *str)
 			snprintf(s, item_len, item_fmt, server, link, playerlist, "", "", tmp, port, mapname, Proxy_UsersCount(streams), statusbuf);
 			HTMLPRINT(s);
 		}
+
+		{
+			oproxy_t *p;
+
+			HTMLPRINT("<observers>" CRLF);
+			for (p = streams->proxies; p; p = p->next) {
+				if (p->drop)
+					continue;
+
+				tmp[0] = '\0';
+				Info_Get(&p->ctx, "name", tmp, sizeof(tmp));
+				if (tmp[0]) {
+					HTMLprintf(playername, sizeof(playername), true, "%s", tmp);
+
+					HTMLPRINT("<o>");
+					HTMLPRINT(playername);
+					HTMLPRINT("</o>" CRLF);
+				}
+			}
+			HTMLPRINT(CRLF "</observers>" CRLF);
+		}
+
+		Info_ValueForKey(streams->players[player].userinfo, "name", tmp, sizeof(tmp));
+		HTMLprintf(playername, sizeof(playername), true, "%s", tmp);
+
 
 		HTMLPRINT("</item>" CRLF);
 	}

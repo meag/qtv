@@ -85,6 +85,16 @@ char *HTMLprintf(char *outb, int outl, qbool qfont, const char *fmt, ...)
 			*outb++ = ';';
 			outl -= 5;
 		}
+		else if (*inb == '"')
+		{
+			*outb++ = '&';
+			*outb++ = 'q';
+			*outb++ = 'u';
+			*outb++ = 'o';
+			*outb++ = 't';
+			*outb++ = ';';
+			outl -= 6;
+		}
 		else
 		{
 			*outb++ = *inb;
