@@ -869,30 +869,18 @@ static void ParseSound(sv_t *tv, netmsg_t *m, int to, unsigned int mask)
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
 	int i;
 	int channel;
-	unsigned char vol;
-	unsigned char atten;
-	unsigned char sound_num;
-	int ent;
 
 	channel = (unsigned short)ReadShort(m);
-
-    if (channel & SND_VOLUME)
-		vol = ReadByte (m);
-	else
-		vol = DEFAULT_SOUND_PACKET_VOLUME;
-
-    if (channel & SND_ATTENUATION)
-		atten = ReadByte (m) / 64.0;
-	else
-		atten = DEFAULT_SOUND_PACKET_ATTENUATION;
-
-	sound_num = ReadByte (m);
-
-	ent = (channel>>3)&1023;
-	channel &= 7;
-
-	for (i=0 ; i<3 ; i++)
+	if (channel & SND_VOLUME) {
+		ReadByte(m); // vol
+	}
+	if (channel & SND_ATTENUATION) {
+		ReadByte(m); // atten
+	}
+	ReadByte(m); // sound_num
+	for (i = 0; i < 3; i++) {
 		ReadCoord(tv, m);
+	}
 }
 
 static void ParseDamage(sv_t *tv, netmsg_t *m, int to, unsigned int mask)
@@ -925,8 +913,6 @@ enum {
 static void ParseTempEntity(sv_t *tv, netmsg_t *m, int to, unsigned int mask)
 {
 	int i;
-	char nqversion[64];
-	int nqversionlength = 0;
 
 	i = ReadByte (m);
 	switch(i)
@@ -944,12 +930,12 @@ static void ParseTempEntity(sv_t *tv, netmsg_t *m, int to, unsigned int mask)
 	case TE_GUNSHOT:
 		ReadByte (m);
 
-		nqversion[0] = svc_temp_entity;
-		nqversion[1] = TE_GUNSHOT;
-		nqversion[2] = ReadByte (m);nqversion[3] = ReadByte (m);
-		nqversion[4] = ReadByte (m);nqversion[5] = ReadByte (m);
-		nqversion[6] = ReadByte (m);nqversion[7] = ReadByte (m);
-		nqversionlength = 8;
+		ReadByte (m);
+		ReadByte (m);
+		ReadByte (m);
+		ReadByte (m);
+		ReadByte (m);
+		ReadByte (m);
 		break;
 	case TE_EXPLOSION:
 		ReadCoord(tv, m);
@@ -1043,10 +1029,9 @@ void ParseNails(sv_t *tv, netmsg_t *m, qbool nails2)
 void ParseDownload(sv_t *tv, netmsg_t *m)
 {
 	int size, b;
-	unsigned int percent;
 
 	size = (signed short)ReadShort(m);
-	percent = ReadByte(m);
+	ReadByte(m); // percent
 
 	if (size < 0)
 	{

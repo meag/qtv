@@ -227,7 +227,7 @@ void kick_f(void)
 void showoutput_f(void)
 {
 	sv_t *qtv;
-	unsigned int id, cnt;
+	unsigned int id;
 	qbool all;
 	qbool show;
 
@@ -246,7 +246,6 @@ void showoutput_f(void)
 	id  = (unsigned int) atoi(Cmd_Argv(1));
 	all = !stricmp(Cmd_Argv(1), "all");
 	show = (qbool) atoi(Cmd_Argv(2));
-	cnt = 0;
 
 	for (qtv = g_cluster.servers; qtv; qtv = qtv->next)
 	{

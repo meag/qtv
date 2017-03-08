@@ -818,7 +818,7 @@ void HTTPSV_GenerateRSS(cluster_t *cluster, oproxy_t *dest, char *str)
 			if (IsPlayer(&streams->players[player])) {
 				HTMLPRINT("<player>");
 			}
-			else if (isSpectator = IsSpectator(&streams->players[player])) {
+			else if ((isSpectator = IsSpectator(&streams->players[player]))) {
 				HTMLPRINT("<spectator>");
 			}
 			else {
