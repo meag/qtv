@@ -270,11 +270,11 @@ void Prox_SendInitialPlayers(sv_t *qtv, oproxy_t *prox, netmsg_t *msg)
 
 		for (j = 0 ; j < 3 ; j++)
 			if (flags & (DF_ORIGIN << j))
-				WriteShort (msg, qtv->players[i].current.origin[j]);
+				WriteCoord (qtv, msg, qtv->players[i].current.origin[j]);
 
 		for (j = 0 ; j < 3 ; j++)
 			if (flags & (DF_ANGLES << j))
-				WriteShort (msg, qtv->players[i].current.angles[j]);
+				WriteAngle (qtv, msg, qtv->players[i].current.angles[j]);
 
 		if (flags & DF_MODEL) // generally, that why we wrote this function, so YES send this
 			WriteByte (msg, qtv->players[i].current.modelindex);

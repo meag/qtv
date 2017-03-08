@@ -237,6 +237,10 @@ extern "C" {
 #define RECONNECT_TIME			(1000 * 30)
 #define DEMO_RECONNECT_TIME		(1000 * 2)				// If demo end, start play it again faster, do not wait 30 seconds.
 
+#define PROTOCOL_VERSION_FTE    (('F'<<0) + ('T'<<8) + ('E'<<16) + ('X' << 24)) //fte extensions.
+#define PROTOCOL_VERSION_FTE2   (('F'<<0) + ('T'<<8) + ('E'<<16) + ('2' << 24))	//fte extensions.
+#define PROTOCOL_VERSION_MVD1   (('M'<<0) + ('V'<<8) + ('D'<<16) + ('1' << 24)) //mvdsv extensions.
+
 //======================================
 
 #include "qconst.h"
@@ -280,7 +284,7 @@ typedef struct
 
 typedef struct 
 {
-	short origin[3];
+	float origin[3];
 	unsigned char soundindex;
 	unsigned char volume;
 	unsigned char attenuation;
@@ -305,9 +309,9 @@ typedef struct
 	unsigned char frame;
 	unsigned char modelindex;
 	unsigned char skinnum;
-	short origin[3];
+	float origin[3];
 	short velocity[3];
-	short angles[3];
+	float angles[3];
 	unsigned char effects;
 	unsigned char weaponframe;
 } player_state_t;
@@ -337,8 +341,8 @@ typedef struct
 	unsigned char modelindex;
 	unsigned char colormap;
 	unsigned char skinnum;
-	short origin[3];
-	char angles[3];
+	float origin[3];
+	float angles[3];
 	unsigned char effects;
 } entity_state_t;
 
@@ -495,7 +499,7 @@ typedef enum
 //
 // Server - Details about a server connection (also known as stream).
 //
-struct sv_s 
+struct sv_s
 {
 	struct sv_s		*next;							// Next cluster->servers connection.
 
@@ -601,6 +605,9 @@ struct sv_s
 													// since these can be split up. We don't want the
 													// servername to be printed in the middle of a chat message.
 
+	unsigned int    extension_flags_fte1;
+	unsigned int    extension_flags_fte2;
+	unsigned int    extension_flags_mvd1;
 };
 
 #define MAX_MASTERS 8 // size for masters fixed size array, I am lazy
@@ -886,6 +893,8 @@ void			ClearNetMsg (netmsg_t *b);
 unsigned char	ReadByte	(netmsg_t *b);
 unsigned short	ReadShort	(netmsg_t *b);
 unsigned int	ReadLong	(netmsg_t *b);
+float           ReadCoord   (sv_t* tv, netmsg_t* b);
+float           ReadAngle   (sv_t* tv, netmsg_t* b);
 unsigned int	BigLong		(unsigned int val);
 unsigned int	SwapLong	(unsigned int val);
 float			ReadFloat	(netmsg_t *b);
@@ -894,6 +903,8 @@ void			WriteByte	(netmsg_t *b, unsigned char c);
 void			WriteShort	(netmsg_t *b, unsigned short l);
 void			WriteLong	(netmsg_t *b, unsigned int l);
 void			WriteFloat	(netmsg_t *b, float f);
+void            WriteCoord  (sv_t* sv, netmsg_t* b, float f);
+void            WriteAngle  (sv_t* sv, netmsg_t* b, float f);
 
 // No null terminator, convienience function.
 void			WriteString2(netmsg_t *b, const char *str);

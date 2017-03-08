@@ -4,6 +4,10 @@
 
 #include "qtv.h"
 
+#define Q_rint(x) ((x) > 0 ? (int) ((x) + 0.5) : (int) ((x) - 0.5))
+
+#define FTE_PEXT_FLOATCOORDS  0x00008000
+
 void InitNetMsg(netmsg_t *b, char *buffer, int bufferlength)
 {
 	memset (b, 0, sizeof (*b));
@@ -45,6 +49,27 @@ unsigned int ReadLong(netmsg_t *b)
 	s2 = ReadShort(b);
 
 	return s1 | (s2<<16);
+}
+
+float ReadAngle16(netmsg_t* b)
+{
+	return ReadShort(b) * (360.0 / 65536);
+}
+
+float ReadAngle(sv_t* tv, netmsg_t* b)
+{
+	if (tv->extension_flags_fte1 & FTE_PEXT_FLOATCOORDS) {
+		return ReadAngle16(b);
+	}
+	return ReadByte(b) * (360.0 / 256);
+}
+
+float ReadCoord(sv_t* tv, netmsg_t* b)
+{
+	if (tv->extension_flags_fte1 & FTE_PEXT_FLOATCOORDS) {
+		return ReadFloat(b);
+	}
+	return ReadShort(b) * (1.0 / 8);
 }
 
 unsigned int BigLong(unsigned int val)
@@ -138,6 +163,26 @@ void WriteString2(netmsg_t *b, const char *str)
 {	//no null terminator, convienience function.
 	while(*str)
 		WriteByte(b, *str++);
+}
+
+void WriteAngle(sv_t* tv, netmsg_t* b, float f)
+{
+	if (tv->extension_flags_fte1 & FTE_PEXT_FLOATCOORDS) {
+		WriteShort(b, Q_rint(f * 65536.0 / 360.0) & 65535);
+	}
+	else {
+		WriteByte(b, Q_rint(f * 256.0 / 360.0) & 255);
+	}
+}
+
+void WriteCoord(sv_t* tv, netmsg_t* b, float f)
+{
+	if (tv->extension_flags_fte1 & FTE_PEXT_FLOATCOORDS) {
+		WriteFloat(b, f);
+	}
+	else {
+		WriteShort(b, (int)(f * 8));
+	}
 }
 
 void WriteString(netmsg_t *b, const char *str)

@@ -21,6 +21,18 @@ void QTV_DefaultMovevars(movevars_t *vars)
 void BuildServerData(sv_t *tv, netmsg_t *msg, int servercount)
 {
 	WriteByte(msg, svc_serverdata);
+	if (tv->extension_flags_fte1) {
+		WriteLong(msg, PROTOCOL_VERSION_FTE);
+		WriteLong(msg, tv->extension_flags_fte1);
+	}
+	if (tv->extension_flags_fte2) {
+		WriteLong(msg, PROTOCOL_VERSION_FTE2);
+		WriteLong(msg, tv->extension_flags_fte2);
+	}
+	if (tv->extension_flags_mvd1) {
+		WriteLong(msg, PROTOCOL_VERSION_MVD1);
+		WriteLong(msg, tv->extension_flags_mvd1);
+	}
 	WriteLong(msg, PROTOCOL_VERSION);
 	WriteLong(msg, servercount);
 
@@ -146,7 +158,7 @@ int SendCurrentUserinfos(sv_t *tv, int cursize, netmsg_t *msg, int i, int thispl
 	return i;
 }
 
-void WriteEntityState(netmsg_t *msg, entity_state_t *es)
+void WriteEntityState(sv_t *tv, netmsg_t *msg, entity_state_t *es)
 {
 	int i;
 	WriteByte(msg, es->modelindex);
@@ -155,8 +167,8 @@ void WriteEntityState(netmsg_t *msg, entity_state_t *es)
 	WriteByte(msg, es->skinnum);
 	for (i = 0; i < 3; i++)
 	{
-		WriteShort(msg, es->origin[i]);
-		WriteByte(msg, es->angles[i]);
+		WriteCoord(tv, msg, es->origin[i]);
+		WriteAngle(tv, msg, es->angles[i]);
 	}
 }
 
@@ -176,7 +188,7 @@ int SendCurrentBaselines(sv_t *tv, int cursize, netmsg_t *msg, int maxbuffersize
 		{
 			WriteByte(msg, svc_spawnbaseline);
 			WriteShort(msg, i);
-			WriteEntityState(msg, &tv->entity[i].baseline);
+			WriteEntityState(tv, msg, &tv->entity[i].baseline);
 		}
 	}
 
@@ -216,9 +228,9 @@ int SendStaticSounds(sv_t *tv, int cursize, netmsg_t *msg, int maxbuffersize, in
 			continue;
 
 		WriteByte(msg, svc_spawnstaticsound);
-		WriteShort(msg, tv->staticsound[i].origin[0]);
-		WriteShort(msg, tv->staticsound[i].origin[1]);
-		WriteShort(msg, tv->staticsound[i].origin[2]);
+		WriteCoord(tv, msg, tv->staticsound[i].origin[0]);
+		WriteCoord(tv, msg, tv->staticsound[i].origin[1]);
+		WriteCoord(tv, msg, tv->staticsound[i].origin[2]);
 		WriteByte(msg, tv->staticsound[i].soundindex);
 		WriteByte(msg, tv->staticsound[i].volume);
 		WriteByte(msg, tv->staticsound[i].attenuation);
@@ -242,7 +254,7 @@ int SendStaticEntities(sv_t *tv, int cursize, netmsg_t *msg, int maxbuffersize, 
 			continue;
 
 		WriteByte(msg, svc_spawnstatic);
-		WriteEntityState(msg, &tv->spawnstatic[i]);
+		WriteEntityState(tv, msg, &tv->spawnstatic[i]);
 	}
 
 	return i;
@@ -285,7 +297,7 @@ int Prespawn(sv_t *qtv, int curmsgsize, netmsg_t *msg, int bufnum, int thisplaye
 	return r;
 }
 
-void SV_WriteDelta(int entnum, const entity_state_t *from, const entity_state_t *to, netmsg_t *msg, qbool force)
+void SV_WriteDelta(sv_t* tv, int entnum, const entity_state_t *from, const entity_state_t *to, netmsg_t *msg, qbool force)
 {
 	unsigned int i;
 	unsigned int bits;
@@ -348,17 +360,17 @@ void SV_WriteDelta(int entnum, const entity_state_t *from, const entity_state_t 
 	if (bits & U_EFFECTS)
 		WriteByte (msg, to->effects&0x00ff);
 	if (bits & U_ORIGIN1)
-		WriteShort (msg, to->origin[0]);
+		WriteCoord (tv, msg, to->origin[0]);
 	if (bits & U_ANGLE1)
-		WriteByte(msg, to->angles[0]);
+		WriteAngle (tv, msg, to->angles[0]);
 	if (bits & U_ORIGIN2)
-		WriteShort (msg, to->origin[1]);
+		WriteCoord (tv, msg, to->origin[1]);
 	if (bits & U_ANGLE2)
-		WriteByte(msg, to->angles[1]);
+		WriteAngle (tv, msg, to->angles[1]);
 	if (bits & U_ORIGIN3)
-		WriteShort (msg, to->origin[2]);
+		WriteCoord (tv, msg, to->origin[2]);
 	if (bits & U_ANGLE3)
-		WriteByte(msg, to->angles[2]);
+		WriteAngle (tv, msg, to->angles[2]);
 }
 
 void Prox_SendInitialEnts(sv_t *qtv, oproxy_t *prox, netmsg_t *msg)
@@ -370,7 +382,7 @@ void Prox_SendInitialEnts(sv_t *qtv, oproxy_t *prox, netmsg_t *msg)
 	for (i = 0; i < frame->numents; i++)
 	{
 		entnum = frame->entnums[i];
-		SV_WriteDelta(entnum, &qtv->entity[entnum].baseline, &frame->ents[i], msg, true);
+		SV_WriteDelta(qtv, entnum, &qtv->entity[entnum].baseline, &frame->ents[i], msg, true);
 	}
 	WriteShort(msg, 0);
 }
