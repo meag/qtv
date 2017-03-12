@@ -906,6 +906,7 @@ void			WriteLong	(netmsg_t *b, unsigned int l);
 void			WriteFloat	(netmsg_t *b, float f);
 void            WriteCoord  (sv_t* sv, netmsg_t* b, float f);
 void            WriteAngle  (sv_t* sv, netmsg_t* b, float f);
+void            WriteAngle16(netmsg_t* b, float f);
 
 // No null terminator, convienience function.
 void			WriteString2(netmsg_t *b, const char *str);

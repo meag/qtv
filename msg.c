@@ -165,10 +165,15 @@ void WriteString2(netmsg_t *b, const char *str)
 		WriteByte(b, *str++);
 }
 
+void WriteAngle16(netmsg_t* b, float f)
+{
+	WriteShort(b, Q_rint(f * 65536.0 / 360.0) & 65535);
+}
+
 void WriteAngle(sv_t* tv, netmsg_t* b, float f)
 {
 	if (tv->extension_flags_fte1 & FTE_PEXT_FLOATCOORDS) {
-		WriteShort(b, Q_rint(f * 65536.0 / 360.0) & 65535);
+		WriteAngle16(b, f);
 	}
 	else {
 		WriteByte(b, Q_rint(f * 256.0 / 360.0) & 255);
