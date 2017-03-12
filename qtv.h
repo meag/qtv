@@ -895,6 +895,7 @@ unsigned short	ReadShort	(netmsg_t *b);
 unsigned int	ReadLong	(netmsg_t *b);
 float           ReadCoord   (sv_t* tv, netmsg_t* b);
 float           ReadAngle   (sv_t* tv, netmsg_t* b);
+float           ReadAngle16 (netmsg_t* b);
 unsigned int	BigLong		(unsigned int val);
 unsigned int	SwapLong	(unsigned int val);
 float			ReadFloat	(netmsg_t *b);

@@ -434,7 +434,7 @@ static void ParsePlayerInfo(sv_t *tv, netmsg_t *m, qbool clearoldplayers)
 	{
 		if (flags & (DF_ANGLES << i))
 		{
-			tv->players[num].current.angles[i] = ReadAngle(tv, m);
+			tv->players[num].current.angles[i] = ReadAngle16(m);
 		}
 	}
 
