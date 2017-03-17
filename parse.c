@@ -930,12 +930,9 @@ static void ParseTempEntity(sv_t *tv, netmsg_t *m, int to, unsigned int mask)
 	case TE_GUNSHOT:
 		ReadByte (m);
 
-		ReadByte (m);
-		ReadByte (m);
-		ReadByte (m);
-		ReadByte (m);
-		ReadByte (m);
-		ReadByte (m);
+		ReadCoord (tv, m);
+		ReadCoord (tv, m);
+		ReadCoord (tv, m);
 		break;
 	case TE_EXPLOSION:
 		ReadCoord(tv, m);
