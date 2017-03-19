@@ -1236,9 +1236,9 @@ void ParseMessage(sv_t *tv, char *buffer, int length, int to, int mask)
 				tv->proxyplayerangles[1] = ReadByte(&buf)*360.0/255;
 				tv->proxyplayerangles[2] = ReadByte(&buf)*360.0/255;
 				#else
-				ReadByte(&buf);
-				ReadByte(&buf);
-				ReadByte(&buf);
+				ReadAngle(tv, &buf);
+				ReadAngle(tv, &buf);
+				ReadAngle(tv, &buf);
 				#endif
 				break;
 			}
@@ -1263,9 +1263,9 @@ void ParseMessage(sv_t *tv, char *buffer, int length, int to, int mask)
 			// svc_updatecolors		17	// [qbyte] [qbyte] [qbyte]
 			case svc_particle:
 			{
-				ReadShort(&buf);
-				ReadShort(&buf);
-				ReadShort(&buf);
+				ReadCoord(tv, &buf);
+				ReadCoord(tv, &buf);
+				ReadCoord(tv, &buf);
 				ReadByte(&buf);
 				ReadByte(&buf);
 				ReadByte(&buf);
