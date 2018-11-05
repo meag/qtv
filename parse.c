@@ -98,6 +98,7 @@ static void ParseServerData(sv_t *tv, netmsg_t *m, int to, unsigned int playerma
 	QTV_SetupFrames(tv); // This memset to 0 too some data and something also.
 
 	strlcpy(tv->status, "Receiving soundlist", sizeof(tv->status));
+	tv->server_data_parsed = true;
 
 	for (prox = tv->proxies; prox; prox = prox->next)
 		if (prox->qtv_ezquake_ext & QTV_EZQUAKE_EXT_DOWNLOAD) // We need it for clients with full download support.

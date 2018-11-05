@@ -588,6 +588,7 @@ struct sv_s
 	char			gamedir[MAX_QPATH];
 	char			serverinfo[MAX_SERVERINFO_STRING];
 	movevars_t		movevars;
+	qbool           server_data_parsed;
 
 	int				clservercount;
 

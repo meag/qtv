@@ -807,7 +807,7 @@ static void Clcmd_send_list(sv_t *qtv, oproxy_t *prox, int svc)
 		return; // kidding us?
 	}
 
-	if (qtv->qstate != qs_active || !*qtv->mapname)
+	if (qtv->qstate != qs_active || !qtv->server_data_parsed)
 	{
 		Sys_Printf("%s: proxy #%i not ready for %s\n", qtv->server, prox->id, Cmd_Argv(0));
 		prox->flushing = true; // so they get Net_SendConnectionMVD() ASAP later
@@ -871,7 +871,7 @@ static void Clcmd_Spawn_f(sv_t *qtv, oproxy_t *prox)
 		return;
 	}
 
-	if (qtv->qstate != qs_active || !*qtv->mapname)
+	if (qtv->qstate != qs_active || !qtv->server_data_parsed)
 	{
 		Sys_Printf("%s: proxy not ready for %s\n", qtv->server, Cmd_Argv(0), prox->id);
 		prox->flushing = true; // so they get Net_SendConnectionMVD() ASAP later
