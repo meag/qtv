@@ -1,5 +1,9 @@
 project('qtv', 'c')
 
+if meson.get_compiler('c').get_id() == 'gcc'
+    add_global_link_arguments('-static-libgcc', language: 'c')
+endif
+
 qtv_sources = [
 	'ban.c',
 	'build.c',
@@ -26,14 +30,8 @@ qtv_sources = [
 	'udp.c'
 ]
 
-c_args = []
-
-library('qtv', qtv_sources,
-	include_directories : include_directories('.'),
-	c_args : c_args,
+executable('qtv', qtv_sources,
 	dependencies : [
-		meson.get_compiler('c').find_library('m', required : false)
-	],
-	name_prefix : ''
+		meson.get_compiler('c').find_library('ws2_32', required : false)
+	]
 )
-
