@@ -1397,9 +1397,19 @@ void ParseMessage(sv_t *tv, char *buffer, int length, int to, int mask)
 			}
 			case svc_modellist:
 			{
+				const char* map;
+
 				i = ParseList(tv, &buf, tv->modellist, to, mask);
-				if (!i)
-				{
+
+				// If the map doesn't have friendly descriptive name, use basic instead
+				map = tv->modellist[1].name;
+				if (map[0] && !tv->mapname[0]) {
+					const char* trimmed = strchr(map, '/');
+
+					strlcpy(tv->mapname, trimmed && trimmed[1] ? trimmed + 1 : map, sizeof(tv->mapname));
+				}
+
+				if (!i) {
 					strlcpy(tv->status, "Prespawning", sizeof(tv->status));
 				}
 				break;
