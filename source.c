@@ -146,19 +146,25 @@ void Net_SendQTVConnectionRequest(sv_t *qtv, char *authmethod, char *challenge)
 			extern cvar_t address;
 
 			char userinfo[1024] = {0};
-			char temp[20] = { 0 };
+			char temp[1024] = { 0 };
+			char* this_address = ((qtv->custom_flags & QTV_CUSTOM_ADDRESS) ? qtv->custom_address : address.string);
 
-			snprintf (temp, sizeof (temp), "%u", qtv->streamid);
+			Sys_Printf("%d: Using address %s (%s:%d)\n", qtv->streamid, this_address, (qtv->custom_flags & QTV_CUSTOM_ADDRESS) ? "custom" : "std", qtv->custom_flags);
 
-			Info_SetValueForStarKey(userinfo, "name", hostname.string, sizeof(userinfo));
-			if (address.string[0])
-			{
-				Info_SetValueForStarKey (userinfo, "address", address.string, sizeof (userinfo));
+			// We might be connecting to server with different flags
+			snprintf(temp, sizeof(temp), "%s (%d)", hostname.string, qtv->streamid);
+
+			Info_SetValueForStarKey(userinfo, "name", temp, sizeof(userinfo));
+
+			if (this_address[0]) {
+				snprintf(temp, sizeof(temp), "%u", qtv->streamid);
+				Info_SetValueForStarKey (userinfo, "address", this_address, sizeof (userinfo));
 				Info_SetValueForStarKey (userinfo, "streamid", temp, sizeof (userinfo));
 			}
 
-			if (userinfo[0])
+			if (userinfo[0]) {
 				Net_UpstreamPrintf(qtv, "USERINFO: \"%s\"\n", userinfo);
+			}
 		}
 
 // qqshka: we do not use RAW at all, so do not bother
@@ -554,7 +560,7 @@ static unsigned int QTV_GenerateStreamID(void)
 	}
 }
 
-sv_t *QTV_NewServerConnection(cluster_t *cluster, const char *server, char *password, qbool force, qbool autoclose, qbool noduplicates, qbool query)
+sv_t *QTV_NewServerConnection2(cluster_t *cluster, const char *server, char *password, qbool force, qbool autoclose, qbool noduplicates, qbool query, qtvoptions_t* options)
 {
 	sv_t *qtv;
 
@@ -591,6 +597,20 @@ sv_t *QTV_NewServerConnection(cluster_t *cluster, const char *server, char *pass
 
 	qtv->streamid = QTV_GenerateStreamID(); // assign stream ID
 
+	// apply options
+	if (options) {
+		qtv->custom_flags = options->flags;
+		if (options->flags & QTV_CUSTOM_ADDRESS) {
+			strlcpy(qtv->custom_address, options->address, sizeof(qtv->custom_address));
+		}
+		if (options->flags & QTV_CUSTOM_PARSEDELAY) {
+			qtv->custom_parse_delay = options->ingame_delay;
+		}
+		if (options->flags & QTV_CUSTOM_PASSWORD) {
+			strlcpy(qtv->custom_password, options->client_password, sizeof(qtv->custom_password));
+		}
+	}
+
 	// Connect to and link QTV to the cluster.
 	{
 		sv_t *last;
@@ -625,6 +645,11 @@ sv_t *QTV_NewServerConnection(cluster_t *cluster, const char *server, char *pass
 	cluster->NumServers++; // One more server connections.
 
 	return qtv;
+}
+
+sv_t* QTV_NewServerConnection(cluster_t* cluster, const char* server, char* password, qbool force, qbool autoclose, qbool noduplicates, qbool query)
+{
+	return QTV_NewServerConnection2(cluster, server, password, force, autoclose, noduplicates, query, NULL);
 }
 
 // add read/write stats for prox, qtv, cluster
@@ -1150,6 +1175,7 @@ float GuessPlaybackSpeed(sv_t *qtv)
 {
 	int ms = 0;
 	float	demospeed, desired, current;
+	float ingame_delay = parse_delay.value;
 
 	if (qtv->qstate != qs_active)
 		return 1; // We are not ready, so use 100%.
@@ -1161,10 +1187,14 @@ float GuessPlaybackSpeed(sv_t *qtv)
 
 	ConsistantMVDDataEx(qtv->buffer, qtv->buffersize, &ms);
 
+	if (qtv->custom_flags & QTV_CUSTOM_PARSEDELAY) {
+		ingame_delay = qtv->custom_parse_delay;
+	}
+
 	// Guess playback speed.
-	if (parse_delay.value)
+	if (ingame_delay)
 	{
-		desired = (ServerInGameState(qtv) ? parse_delay.value : 0.5); // In prewar use short delay.
+		desired = (ServerInGameState(qtv) ? ingame_delay : 0.5); // In prewar use short delay.
 		desired = bound(0.5, desired, 20.0); // Bound it to reasonable values.
 		current = 0.001 * ms;
 

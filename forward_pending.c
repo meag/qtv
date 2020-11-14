@@ -523,39 +523,8 @@ static qbool SV_CheckForQTVRequest(cluster_t *cluster, oproxy_t *pend)
 	if (pend->flushing)
 		return false;
 
-	pend->authenticated = SV_QTVValidateAuthentication(authmethod, password, pend->authchallenge, qtv_password.string);
-
 	if (userinfo[0]) {
 		Info_Convert(&pend->ctx, userinfo);
-	}
-
-	if (!pend->authenticated) {
-		if (authmethod == QTVAM_CCITT && !password[0]) {
-			Net_ProxyPrintf(
-				pend, "%s"
-				"AUTH: CCITT\n"
-				"CHALLENGE: %s\n\n",
-				QTV_SV_HEADER(pend, QTV_VERSION),
-				pend->authchallenge
-			);
-		}
-		else if (authmethod == QTVAM_MD4 && !password[0]) {
-			Net_ProxyPrintf(
-				pend, "%s"
-				"AUTH: MD4\n"
-				"CHALLENGE: %s\n\n",
-				QTV_SV_HEADER(pend, QTV_VERSION),
-				pend->authchallenge
-			);
-		}
-		else {
-			Net_ProxyPrintf(pend, "%s"
-				"PERROR: Authentication failure\n\n",
-				QTV_SV_HEADER(pend, QTV_VERSION));
-
-			pend->flushing = true;
-		}
-		return false;
 	}
 
 	// Workaround for ezquake clients (possibly others) not re-sending source when replying to challenge
@@ -568,6 +537,41 @@ static qbool SV_CheckForQTVRequest(cluster_t *cluster, oproxy_t *pend)
 		}
 		else if (!strncmp(pend->authsource, "RECEIVE:", sizeof("RECEIVE:") - 1)) {
 			qtv = SV_ReadReceiveRequest(cluster, pend);
+		}
+	}
+
+	pend->authenticated = false;
+	if (qtv) {
+		const char* required = (qtv->custom_flags & QTV_CUSTOM_PASSWORD ? qtv->custom_password : qtv_password.string);
+
+		pend->authenticated = SV_QTVValidateAuthentication(authmethod, password, pend->authchallenge, required);
+		if (!pend->authenticated) {
+			if (authmethod == QTVAM_CCITT && !password[0]) {
+				Net_ProxyPrintf(
+					pend, "%s"
+					"AUTH: CCITT\n"
+					"CHALLENGE: %s\n\n",
+					QTV_SV_HEADER(pend, QTV_VERSION),
+					pend->authchallenge
+				);
+			}
+			else if (authmethod == QTVAM_MD4 && !password[0]) {
+				Net_ProxyPrintf(
+					pend, "%s"
+					"AUTH: MD4\n"
+					"CHALLENGE: %s\n\n",
+					QTV_SV_HEADER(pend, QTV_VERSION),
+					pend->authchallenge
+				);
+			}
+			else {
+				Net_ProxyPrintf(pend, "%s"
+					"PERROR: Authentication failure\n\n",
+					QTV_SV_HEADER(pend, QTV_VERSION));
+
+				pend->flushing = true;
+			}
+			return false;
 		}
 	}
 

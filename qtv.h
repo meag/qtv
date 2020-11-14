@@ -243,6 +243,10 @@ extern "C" {
 #define PROTOCOL_VERSION_FTE2   (('F'<<0) + ('T'<<8) + ('E'<<16) + ('2' << 24))	//fte extensions.
 #define PROTOCOL_VERSION_MVD1   (('M'<<0) + ('V'<<8) + ('D'<<16) + ('1' << 24)) //mvdsv extensions.
 
+#define QTV_CUSTOM_PARSEDELAY    (1)
+#define QTV_CUSTOM_PASSWORD      (2)
+#define QTV_CUSTOM_ADDRESS       (4)
+
 //======================================
 
 #include "qconst.h"
@@ -530,6 +534,12 @@ struct sv_s
 	io_stat_t		socket_stat;					// read/write stats for socket
 	io_stat_t		proxies_socket_stat;			// read/write stats for proxies sockets
 
+	// Allows options to be set per-connection: aim for QTV on single port to support multiple connections
+	int             custom_flags;                   // combination of QTV_CUSTOM_*
+	float           custom_parse_delay;             // over-ride of parse_delay cvar
+	char            custom_password[64];            // over-ride of qtv_password cvar
+	char            custom_address[128];            // over-ride of address cvar
+
 	//
 	// Fields above saved on each QTV_Connect()
 	//
@@ -772,6 +782,16 @@ unsigned long	Sys_HashKey(const char *str);						// Hash function.
 void			Get_Uptime(ullong uptime_seconds, unsigned int *days, unsigned int *h, unsigned int *m); // Converts uptime seconds to days hours and minutes.
 
 
+// Custom per-stream options
+typedef struct qtvoptions_s {
+	char client_password[64];
+	float ingame_delay;
+	char address[128];
+
+	int flags;
+} qtvoptions_t;
+
+
 //
 // token.c
 //
@@ -841,6 +861,10 @@ sv_t			*QTV_Stream_by_ID(unsigned int id);
 // malloc(qtv) and init, call QTV_Connect and link to servers list.
 sv_t			*QTV_NewServerConnection(cluster_t *cluster, const char *server, char *password, 
 								qbool force, qbool autoclose, qbool noduplicates, qbool query);
+
+// Same as QTV_NewServerConnection but allow specification of custom options
+sv_t* QTV_NewServerConnection2(cluster_t * cluster, const char* server, char* password,
+	qbool force, qbool autoclose, qbool noduplicates, qbool query, qtvoptions_t* options);
 
 // add read/write stats for prox, qtv, cluster.
 void			QTV_SocketIOStats(sv_t *qtv, int r, int w);
