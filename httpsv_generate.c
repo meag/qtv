@@ -283,6 +283,9 @@ void HTTPSV_GenerateNowPlaying(cluster_t *cluster, oproxy_t *dest)
 	HTMLPRINT("    <table id=\"nowplaying\" cellspacing=\"0\">\n");
 	for (streams = cluster->servers; streams; streams = streams->next)
 	{
+		extern cvar_t qtv_password;
+		qbool is_pw_protected = ((streams->custom_flags & QTV_CUSTOM_PASSWORD) ? streams->custom_password : qtv_password.string)[0];
+
 		// skip "tcp:" prefix if any
 		server = (strncmp(streams->server, "tcp:", sizeof("tcp:") - 1) ? streams->server : streams->server + sizeof("tcp:") - 1);
 
@@ -345,7 +348,12 @@ void HTTPSV_GenerateNowPlaying(cluster_t *cluster, oproxy_t *dest)
 		// 3rd cell: map name
 		if (streams->qstate < qs_active)
 		{
-			HTMLPRINT("        <td class=\"mn\">NOT CONNECTED</td>\n");
+			HTMLPRINT("        <td class=\"mn\">");
+			HTMLPRINT("NOT CONNECTED");
+			if (is_pw_protected) {
+				HTMLPRINT("<br />(password protected)");
+			}
+			HTMLPRINT("</td>\n");
 		}
 		else if (!strcmp(streams->gamedir, "qw"))
 		{
@@ -356,6 +364,9 @@ void HTTPSV_GenerateNowPlaying(cluster_t *cluster, oproxy_t *dest)
 			HTMLPRINT("</span>");
 			HTMLprintf(buffer, sizeof(buffer), true, " (%s)", mapname);
 			Net_ProxySend(cluster, dest, buffer, strlen(buffer));
+			if (is_pw_protected) {
+				HTMLPRINT("<br />(password protected)");
+			}
 			HTMLPRINT("</td>\n");
 		}
 		else
@@ -369,6 +380,9 @@ void HTTPSV_GenerateNowPlaying(cluster_t *cluster, oproxy_t *dest)
 			Net_ProxySend(cluster, dest, buffer, strlen(buffer));
 			HTMLprintf(buffer, sizeof(buffer), true, "%s)", mapname);
 			Net_ProxySend(cluster, dest, buffer, strlen(buffer));
+			if (is_pw_protected) {
+				HTMLPRINT("<br />(password protected)");
+			}
 			HTMLPRINT("</td>\n");
 		}
 
