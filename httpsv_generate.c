@@ -284,7 +284,10 @@ void HTTPSV_GenerateNowPlaying(cluster_t *cluster, oproxy_t *dest)
 	for (streams = cluster->servers; streams; streams = streams->next)
 	{
 		extern cvar_t qtv_password;
+		extern cvar_t address;
+
 		qbool is_pw_protected = ((streams->custom_flags & QTV_CUSTOM_PASSWORD) ? streams->custom_password : qtv_password.string)[0];
+		const char* stream_address = ((streams->custom_flags & QTV_CUSTOM_ADDRESS) ? streams->custom_address : address.string);
 
 		// skip "tcp:" prefix if any
 		server = (strncmp(streams->server, "tcp:", sizeof("tcp:") - 1) ? streams->server : streams->server + sizeof("tcp:") - 1);
@@ -324,14 +327,28 @@ void HTTPSV_GenerateNowPlaying(cluster_t *cluster, oproxy_t *dest)
 		Net_ProxySend(cluster, dest, buffer, strlen(buffer));
 		oddrow = !oddrow;
 
-
 		// 1st cell: watch now button
-		if (!allow_join.integer) {
-			snprintf(buffer, sizeof(buffer), "        <td class=\"wn\"><span class=\"qtvfile\"><a href=\"qw://%i@%s:28000/qtvplay\">Watch&nbsp;now!</a></span></td>\n", streams->streamid, hostname.string);
-			Net_ProxySend(cluster, dest, buffer, strlen(buffer));
-		} else {
-			snprintf(buffer, sizeof(buffer), "        <td class=\"wn\"><span class=\"qtvfile\"><a href=\"qw://%i@n%s:28000/qtvplay\">Watch&nbsp;now!</a></span></td>\n", streams->streamid, hostname.string);
-			Net_ProxySend(cluster, dest, buffer, strlen(buffer));
+		if (stream_address[0]) {
+			// We have external address, create http:// links
+			if (!allow_join.integer) {
+				snprintf(buffer, sizeof(buffer), "        <td class=\"wn\"><span class=\"qtvfile\"><a href=\"qw://%i@%s/qtvplay\">Watch&nbsp;now!</a></span></td>\n", streams->streamid, stream_address);
+				Net_ProxySend(cluster, dest, buffer, strlen(buffer));
+			}
+			else {
+				snprintf(buffer, sizeof(buffer), "        <td class=\"wn\"><span class=\"qtvfile\"><a href=\"qw://%i@n%s/qtvplay\">Watch&nbsp;now!</a></span></td>\n", streams->streamid, stream_address);
+				Net_ProxySend(cluster, dest, buffer, strlen(buffer));
+			}
+		}
+		else {
+			// Old style
+			if (!allow_join.integer) {
+				snprintf(buffer, sizeof(buffer), "        <td class=\"wn\"><span class=\"qtvfile\"><a href=\"/watch.qtv?sid=%i\">Watch&nbsp;now!</a></span></td>\n", streams->streamid);
+				Net_ProxySend(cluster, dest, buffer, strlen(buffer));
+			}
+			else {
+				snprintf(buffer, sizeof(buffer), "        <td class=\"wn\"><span class=\"qtvfile\"><a href=\"/watch.qtv?sid=%i\">Watch</a></span><span class=\"qtvfile\"><a href=\"/join.qtv?sid=%i\">Join</a></span></td>\n", streams->streamid, streams->streamid);
+				Net_ProxySend(cluster, dest, buffer, strlen(buffer));
+			}
 		}
 
 		char hostname[1024];
