@@ -1171,11 +1171,22 @@ int ServerInGameState(sv_t *qtv)
 	return 1;
 }
 
+static float ExpectedBuffer(sv_t* qtv)
+{
+	float ingame_delay = parse_delay.value;
+
+	if (qtv->custom_flags & QTV_CUSTOM_PARSEDELAY) {
+		ingame_delay = qtv->custom_parse_delay;
+	}
+
+	return max(ingame_delay, 0);
+}
+
 float GuessPlaybackSpeed(sv_t *qtv)
 {
 	int ms = 0;
-	float	demospeed, desired, current;
-	float ingame_delay = parse_delay.value;
+	float demospeed, desired, current;
+	float ingame_delay = ExpectedBuffer(qtv);
 
 	if (qtv->qstate != qs_active)
 		return 1; // We are not ready, so use 100%.
@@ -1186,10 +1197,6 @@ float GuessPlaybackSpeed(sv_t *qtv)
 		return 1;
 
 	ConsistantMVDDataEx(qtv->buffer, qtv->buffersize, &ms);
-
-	if (qtv->custom_flags & QTV_CUSTOM_PARSEDELAY) {
-		ingame_delay = qtv->custom_parse_delay;
-	}
 
 	// Guess playback speed.
 	if (ingame_delay)
@@ -1247,6 +1254,7 @@ int QTV_ParseMVD(sv_t *qtv)
 	int lengthofs;
 	int packettime;
 	int forwards = 0;
+	qbool low_latency_mode = (ExpectedBuffer(qtv) == 0);
 
 	float demospeed;
 
@@ -1258,16 +1266,16 @@ int QTV_ParseMVD(sv_t *qtv)
 	if (qtv->qstate <= qs_parsingQTVheader)
 		return 0; // We are not ready to parse.
 
-	demospeed = max(0.001, GuessPlaybackSpeed(qtv));
+	demospeed = (low_latency_mode ? 1.0f : max(0.001, GuessPlaybackSpeed(qtv)));
 
-	while (qtv->curtime >= qtv->parsetime)
+	while (low_latency_mode || qtv->curtime >= qtv->parsetime)
 	{
 		if (qtv->buffersize < 2)
 		{	
 			// Not enough stuff to play.
-			if (qtv->curtime > qtv->parsetime)
+			if (qtv->curtime > qtv->parsetime && !low_latency_mode)
 			{
-				qtv->parsetime = qtv->curtime + 2000;	// Add two seconds.
+				qtv->parsetime = qtv->curtime + (ExpectedBuffer(qtv) ? 2000 : 250);	// Add two seconds.
 				if (IsSourceStream(qtv))
 					Sys_Printf("%s: Not enough buffered #1\n", qtv->server);
 			}
@@ -1277,10 +1285,10 @@ int QTV_ParseMVD(sv_t *qtv)
 		buffer = qtv->buffer;
 		message_type = buffer[1] & dem_mask;
 
-		packettime     = (float)buffer[0] / demospeed;
+		packettime = (float)buffer[0] / demospeed;
 		nextpackettime = qtv->parsetime + packettime;
 
-		if (nextpackettime >= qtv->curtime)
+		if (nextpackettime >= qtv->curtime && !low_latency_mode)
 			break;
 
 		switch (message_type)
@@ -1289,19 +1297,21 @@ int QTV_ParseMVD(sv_t *qtv)
 			{
 				length = 10;
 
-				if (qtv->buffersize < length)
-				{	
-					// Not enough stuff to play.
-					qtv->parsetime = qtv->curtime + 2000;	// Add two seconds.
-					if (IsSourceStream(qtv))
-						Sys_Printf("%s: Not enough buffered #2\n", qtv->server);
+				if (qtv->buffersize < length) {
+					if (!low_latency_mode) {
+						// Not enough stuff to play.
+						qtv->parsetime = qtv->curtime + 2000;	// Add two seconds.
+						if (IsSourceStream(qtv))
+							Sys_Printf("%s: Not enough buffered #2\n", qtv->server);
+					}
 
 					continue;
 				}
 
 				// We're about to destroy this data, so it had better be forwarded by now!
-				if (qtv->buffersize < length)
-					Sys_Error ("%s: QTV_ParseMVD: qtv->buffersize < length", qtv->server);
+				if (qtv->buffersize < length) {
+					Sys_Error("%s: QTV_ParseMVD: qtv->buffersize < length", qtv->server);
+				}
 
 				forwards++;
 				buffer[0] = packettime; // adjust packet time according to our demospeed.
@@ -1326,11 +1336,13 @@ int QTV_ParseMVD(sv_t *qtv)
 		}
 
 		if (qtv->buffersize < lengthofs + 4)
-		{	
-			// The size parameter doesn't fit.
-			if (IsSourceStream(qtv))
-				Sys_Printf("%s: Not enough buffered #3\n", qtv->server);
-			qtv->parsetime = qtv->curtime + 2000;	// Add two seconds
+		{
+			if (!low_latency_mode) {
+				// The size parameter doesn't fit.
+				if (IsSourceStream(qtv))
+					Sys_Printf("%s: Not enough buffered #3\n", qtv->server);
+				qtv->parsetime = qtv->curtime + 2000;	// Add two seconds
+			}
 			break;
 		}
 
@@ -1344,15 +1356,17 @@ int QTV_ParseMVD(sv_t *qtv)
 
 			close_source(qtv, "QTV_ParseMVD");
 
-			qtv->buffersize = qtv->UpstreamBufferSize = 0;			
+			qtv->buffersize = qtv->UpstreamBufferSize = 0;
 			break;
 		}
 
-		if (length + lengthofs + 4 > qtv->buffersize)
-		{
-			if (IsSourceStream(qtv))
-				Sys_Printf("%s: Not enough buffered #4\n", qtv->server);
-			qtv->parsetime = qtv->curtime + 2000;	// Add two seconds.
+		if (length + lengthofs + 4 > qtv->buffersize) {
+			if (!low_latency_mode) {
+				if (IsSourceStream(qtv)) {
+					Sys_Printf("%s: Not enough buffered #4\n", qtv->server);
+				}
+				qtv->parsetime = qtv->curtime + 2000;	// Add two seconds.
+			}
 			break;	// Can't parse it yet.
 		}
 
@@ -1394,8 +1408,9 @@ int QTV_ParseMVD(sv_t *qtv)
 		length = lengthofs + 4 + length;	// Make length be the length of the entire packet
 
 		// We're about to destroy this data, so it had better be forwarded by now!
-		if (qtv->buffersize < length)
-			Sys_Error ("%s: QTV_ParseMVD: qtv->buffersize < length", qtv->server);
+		if (qtv->buffersize < length) {
+			Sys_Error("%s: QTV_ParseMVD: qtv->buffersize < length", qtv->server);
+		}
 
 		forwards++;
 		buffer[0] = packettime; // adjust packet time according to our demospeed.
@@ -1406,8 +1421,9 @@ int QTV_ParseMVD(sv_t *qtv)
 		qtv->parsetime = nextpackettime;
 
 		// qqshka: This was in original qtv, cause overflow in some cases.
-		if (qtv->src.type == SRC_DEMO)
+		if (qtv->src.type == SRC_DEMO) {
 			Net_ReadStream(qtv); // FIXME: remove me
+		}
 	}
 
 	// Advance reconnect time in two cases: 
