@@ -613,15 +613,16 @@ struct sv_s
 	entity_state_t	spawnstatic[MAX_STATICENTITIES];
 	int				spawnstatic_count;
 
-	frame_t			frame[MAX_ENTITY_FRAMES];
+	frame_t         frame[MAX_ENTITY_FRAMES];
 
-	int				cdtrack;
+	int             cdtrack;
+	int             paused;
 
-	qbool			prev_was_svc_print;
-	qbool			svc_print_servername;			// Small hack to figure out if we should write 
-													// the servername when parsing svc_print messages
-													// since these can be split up. We don't want the
-													// servername to be printed in the middle of a chat message.
+	qbool           prev_was_svc_print;
+	qbool           svc_print_servername;           // Small hack to figure out if we should write
+	                                                // the servername when parsing svc_print messages
+	                                                // since these can be split up. We don't want the
+	                                                // servername to be printed in the middle of a chat message.
 
 	// mvdsv sends STAT_TIME directly to player, so it isn't in .mvd/qtv stream
 	//   but STAT_MATCHSTARTTIME is sent every time the player respawns, so can pick this value up and use a local offset to guess

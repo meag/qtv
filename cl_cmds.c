@@ -910,6 +910,14 @@ static void Clcmd_Spawn_f(sv_t *qtv, oproxy_t *prox)
 	Prox_SendMessage(&g_cluster, prox, msg.data, msg.cursize, dem_read, (unsigned)-1);
 	msg.cursize = 0;
 
+	// if game is paused, inform proxy
+	if (qtv->paused) {
+		WriteByte(&msg, svc_setpause);
+		WriteByte(&msg, qtv->paused);
+		Prox_SendMessage(&g_cluster, prox, msg.data, msg.cursize, dem_read, (unsigned)-1);
+		msg.cursize = 0;
+	}
+
 	Net_TryFlushProxyBuffer(&g_cluster, prox);
 
 	if (prox->flushing)

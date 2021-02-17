@@ -1307,7 +1307,7 @@ void ParseMessage(sv_t *tv, char *buffer, int length, int to, int mask)
 			}
 			case svc_setpause:	// [qbyte] on / off
 			{
-				ReadByte(&buf);
+				tv->paused = ReadByte(&buf);
 				break;
 			}
 			// svc_signonnum		25	// [qbyte]  used for the signon sequence
