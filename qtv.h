@@ -1155,6 +1155,18 @@ void			UDP_Init(void);
 void			SV_CheckUDPPort(cluster_t *cluster, int port);
 void			SV_UDP_Frame(cluster_t *cluster);
 
+// PROTOCOL EXTENSIONS
+#define FTE_PEXT_FLOATCOORDS  0x00008000
+
+// Commented out extensions don't affect QTV stream
+//#define MVD_PEXT1_FLOATCOORDS       (1 <<  0) // FTE_PEXT_FLOATCOORDS but for entity/player coords only
+//#define MVD_PEXT1_HIGHLAGTELEPORT   (1 <<  1) // Adjust movement direction for frames following teleport
+//#define MVD_PEXT1_SERVERSIDEWEAPON  (1 <<  2) // Server-side weapon selection
+//#define MVD_PEXT1_DEBUG_WEAPON      (1 <<  3) // Send weapon-choice explanation to server for logging
+//#define MVD_PEXT1_DEBUG_ANTILAG     (1 <<  4) // Send predicted positions to server (compare to antilagged positions)
+#define MVD_PEXT1_HIDDEN_MESSAGES   (1 <<  5) // dem_multiple(0) packets are in format (<length> <type-id>+ <packet-data>)*
+//#define MVD_PEXT1_SERVERSIDEWEAPON2 (1 <<  6) // Server-side weapon selection supports clc_mvd_weapon_full_impulse
+
 #ifdef __cplusplus
 }
 #endif

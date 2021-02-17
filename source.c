@@ -1379,8 +1379,10 @@ int QTV_ParseMVD(sv_t *qtv)
 				case dem_multiple:
 				{
 					// Read the player mask.
-					unsigned int mask = LittleLong(*((unsigned int *)&buffer[lengthofs - 4])); 
-					ParseMessage(qtv, messbuf, length, message_type, mask);
+					unsigned int mask = LittleLong(*((unsigned int *)&buffer[lengthofs - 4]));
+					if (mask || !(qtv->extension_flags_mvd1 & MVD_PEXT1_HIDDEN_MESSAGES)) {
+						ParseMessage(qtv, messbuf, length, message_type, mask);
+					}
 					break;
 				}
 				case dem_single:
