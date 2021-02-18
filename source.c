@@ -1086,9 +1086,22 @@ qbool IsSourceStream(sv_t *qtv)
 	return (qtv->src.type == SRC_TCP || qtv->src.type == SRC_DEMO);
 }
 
+// mvdhidden_paused_duration(msec) embedded in dem_multiple(0) packet
+// used to tell us how much elapsed time has gone by when paused
+static qbool IsPausedTimeMessage(unsigned char* buffer, int length, unsigned char* elapsed_time)
+{
+	// expect buffer length 7 (more correct to not demand this but these packets are special case)
+	// <int: length> == 3, <short: type> == mvdhidden_paused_duration, <byte: elapsed_time> (returned)
+	if (length == 7 && LittleLong(*((int*)&buffer[0])) == 3 && LittleShort(*((short*)&buffer[4])) == mvdhidden_paused_duration) {
+		*elapsed_time = buffer[6];
+		return true;
+	}
+	return false;
+}
+
 // return non zero if we have at least one message
 // ms - will contain miliseconds.
-int ConsistantMVDDataEx(unsigned char *buffer, int remaining, int *ms)
+static int ConsistantMVDDataEx(unsigned char *buffer, int remaining, int *ms, qbool use_elapsed_time)
 {
 	qbool warn = true;
 	int lengthofs;
@@ -1100,6 +1113,8 @@ int ConsistantMVDDataEx(unsigned char *buffer, int remaining, int *ms)
 
 	while (true)
 	{
+		qbool hidden = false;
+
 		if (remaining < 2)
 		{
 			return available;
@@ -1118,9 +1133,11 @@ int ConsistantMVDDataEx(unsigned char *buffer, int remaining, int *ms)
 				break;
 		}
 
-		if (lengthofs + 4 > remaining)
-		{
+		if (lengthofs + 4 > remaining) {
 			return available;
+		}
+		if ((buffer[1] & dem_mask) == dem_multiple) {
+			hidden = (LittleLong(*((int*)&buffer[2])) == 0);
 		}
 
 		length = LittleLong(*((int *)&buffer[lengthofs]));
@@ -1140,18 +1157,22 @@ gottotallength:
 		}
 
 		// buffer[0] is the time since the last MVD message in miliseconds.
-		if (ms)
-			ms[0] += buffer[0];
+		if (ms) {
+			// use elapsed time if streaming, skip past it otherwise...
+			unsigned char elapsed_time;
+
+			if (use_elapsed_time && hidden && IsPausedTimeMessage(buffer + lengthofs, length - lengthofs, &elapsed_time)) {
+				ms[0] += elapsed_time;
+			}
+			else {
+				ms[0] += buffer[0];
+			}
+		}
 			
 		remaining -= length;
 		available += length;
 		buffer    += length;
 	}
-}
-
-int ConsistantMVDData(unsigned char *buffer, int remaining)
-{
-	return ConsistantMVDDataEx(buffer, remaining, NULL);
 }
 
 int ServerInGameState(sv_t *qtv)
@@ -1191,12 +1212,16 @@ float GuessPlaybackSpeed(sv_t *qtv)
 	if (qtv->qstate != qs_active)
 		return 1; // We are not ready, so use 100%.
 
+	//if (qtv->paused /*&& qtv->unpause_pending - qtv->curtime < 0*/) {
+	//	return 1; // when game is paused, go full speed
+	//}
+
 	// This is SRC_DEMO or something, so use 100%, because buffer adjustment works badly in demo case.
 	// Auto adjustment works badly because we always have too much or too less data in buffer in demo(mvd file) case.
 	if (qtv->src.type != SRC_TCP)
 		return 1;
 
-	ConsistantMVDDataEx(qtv->buffer, qtv->buffersize, &ms);
+	ConsistantMVDDataEx(qtv->buffer, qtv->buffersize, &ms, qtv->src.type == SRC_TCP && (qtv->extension_flags_mvd1 & MVD_PEXT1_HIDDEN_MESSAGES));
 
 	// Guess playback speed.
 	if (ingame_delay)
@@ -1270,20 +1295,36 @@ int QTV_ParseMVD(sv_t *qtv)
 
 	while (low_latency_mode || qtv->curtime >= qtv->parsetime)
 	{
+		unsigned char original_ms = 0;
+		qbool hidden_message = false;
+
 		if (qtv->buffersize < 2)
 		{	
 			// Not enough stuff to play.
 			if (qtv->curtime > qtv->parsetime && !low_latency_mode)
 			{
+				double delta = qtv->curtime - qtv->parsetime;
 				qtv->parsetime = qtv->curtime + (ExpectedBuffer(qtv) ? 2000 : 250);	// Add two seconds.
 				if (IsSourceStream(qtv))
-					Sys_Printf("%s: Not enough buffered #1\n", qtv->server);
+					Sys_Printf("%s: Not enough buffered #1 (%3.2f, %3.2f)\n", qtv->server, qtv->curtime / 1000.0f, delta / 1000.0f);
 			}
 			break;
 		}
 
 		buffer = qtv->buffer;
 		message_type = buffer[1] & dem_mask;
+
+		original_ms = buffer[0];
+
+		// If streaming from server, use the elapsed time when paused rather than gametime
+		hidden_message = (message_type == dem_multiple && (qtv->extension_flags_mvd1 & MVD_PEXT1_HIDDEN_MESSAGES) && LittleLong(*((unsigned int*)&buffer[2])) == 0);
+		if (hidden_message && qtv->src.type == SRC_TCP && qtv->buffersize >= 13) {
+			unsigned char elapsed_time;
+			if (IsPausedTimeMessage(buffer + 6, 7, &elapsed_time)) {
+				// We're streaming, use elapsed time when paused
+				buffer[0] = elapsed_time;
+			}
+		}
 
 		packettime = (float)buffer[0] / demospeed;
 		nextpackettime = qtv->parsetime + packettime;
